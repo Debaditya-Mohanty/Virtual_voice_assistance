@@ -12,11 +12,17 @@ import cv2
 import numpy as np
 import winshell
 
-##wolfarm alpha
-##things that can be added
-##integration with google caleder,NEWS,WEATHER APIs
-##SMS Automation
-#import datetime
+import calendar
+import ctypes
+import subprocess
+import requests
+import json
+import os.path
+from twilio.rest import Client
+import wolframalpha
+import pickle
+from time import sleep
+
 
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
@@ -108,6 +114,7 @@ def sendEmail(to, content):
     server.sendmail('youremail@gmail.com', to, content)
     server.close()
 """
+
 def cpu():
     usage = str(psutil.cpu_percent())
     speak("CPU is at"+usage)
@@ -151,9 +158,60 @@ def screen_recorder():
     # Destroy all windows 
     cv2.destroyAllWindows()
 
+def weather(query):
+    key = 'b4f591facf629efb2500c52760ca8d50'
+    weather_url = "http://api.openweathermap.org/data/2.5/weather?"
+    ind = query.split().index("in")
+    location = query.split()[ind + 1:]
+    location = "".join(location)
+    url = weather_url + "appid=" + key + "&q=" + location
+    js = requests.get(url).json()
+    if js["cod"] != "404":
+        weather = js["main"]
+        temperature = weather["temp"]
+        temperature = int(temperature - 273.15)
+        humidity = weather["humidity"]
+        desc = js["weather"][0]["description"]
+        weather_response = " The temperature in Celcius is " + str(temperature) + " The humidity is " + str(humidity) + " and The weather description is " + str(desc)
+        speak(weather_response)
 
+    else :
+
+        speak("City not found")
+
+def news(query):
     
-    
+    url = ("http://newsapi.org/v2/top-headlines?"
+                    "country= in&"
+                    "apiKey= YOUR NEWS API KEY")
+
+    try:
+        news = requests.get(url).json()
+    except:
+        speak("Please check your connection")
+
+    #news = json.loads(response.text)
+
+    for new in news["articles"]:
+        print(str(new["title"]), "\n")
+        speak(str(new["title"]))
+        engine.runAndWait()
+
+        print(str(new["description"]), "\n")
+        speak(str(new["description"]))
+        engine.runAndWait()
+        time.sleep(2)
+
+def sms(query):
+    account_sid = "YOUR SID "
+    auth_token = " YOUR TOKEN "
+    client = Client(account_sid, auth_token)
+
+    speak("What should i send")
+    message = client.messages.create(body=rec_audio(), from_="from No.", to="to No.")
+
+    print(message.sid)
+    speak("Message sent successfully")
     
 if __name__ == "__main__":
     count=0
@@ -238,6 +296,34 @@ if __name__ == "__main__":
 
         elif 'where is' in query:
             location(query)
+
+        elif 'weather' in query:
+            weather(query)
+
+        elif 'news' in query:
+            news(query)
+
+        elif 'send message ' or 'send a message'in query:
+            sms(query)
+
+
+        elif "calculate" in text:
+            app_id = "Wolfram Alpha ID"
+            client = wolframalpha.Client(app_id)
+            ind = text.lower().split().index("calculate")
+            text = text.split()[ind + 1:]
+            res = client.query(" ".join(text))
+            answer = next(res.results).text
+            speak("The answer is " + answer)
+
+        elif "what is" in text or "who is" in text:
+            app_id = "Wolfram Alpha ID"
+            client = wolframalpha.Client(app_id)
+            ind = text.lower().split().index("is")
+            text = text.split()[ind + 1:]
+            res = client.query(" ".join(text))
+            answer = next(res.results).text
+            speak(answer)
             
         #shut down the computer in the below queries
             
